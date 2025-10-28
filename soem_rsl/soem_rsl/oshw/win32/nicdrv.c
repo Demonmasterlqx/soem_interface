@@ -39,9 +39,9 @@
 #include <string.h>
 
 #include <winsock2.h>
-#include "ethercattype.h"
+#include "soem_rsl/soem_rsl/ethercattype.h"
 #include <Mmsystem.h>
-#include "nicdrv.h"
+#include "soem_rsl/oshw/linux/nicdrv.h"
 #include "osal_win32.h"
 
 #endif

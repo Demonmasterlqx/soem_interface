@@ -3,7 +3,7 @@
  * LICENSE file in the project root for full license information
  */
 
-#include "oshw.h"
+#include "soem_rsl/oshw/linux/oshw.h"
 
 /**
  * Host to Network byte order (i.e. to big endian).

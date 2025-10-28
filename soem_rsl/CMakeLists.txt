@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 project(soem_rsl C)
 
-find_package(catkin REQUIRED)
+find_package(ament_cmake REQUIRED)
 
 if(WIN32)
   set(OS "win32")
@@ -46,30 +46,26 @@ endif()
 message("OS is ${OS}")
 
 
-catkin_package(
-   INCLUDE_DIRS
-        ./soem_rsl
-        ./soem_rsl/soem_rsl
-        ./soem_rsl/osal
-        ./soem_rsl/osal/${OS}
-        ./soem_rsl/oshw/${OS}
-   LIBRARIES soem_rsl)
-
 set(soem_rsl_INCLUDE_INSTALL_DIR include/soem_rsl)
 set(soem_rsl_LIB_INSTALL_DIR lib)
 set(BUILD_TESTS TRUE)
 
+# Configure ament package settings
+ament_export_targets(soem_rslConfig HAS_LIBRARY_TARGET)
 
 
-file(GLOB soem_rsl_SOURCES soem_rsl/soem_rsl/*.c)
-file(GLOB OSAL_SOURCES soem_rsl/osal/${OS}/*.c)
-file(GLOB OSHW_SOURCES soem_rsl/oshw/${OS}/*.c)
 
-file(GLOB soem_rsl_HEADERS soem_rsl/soem_rsl/*.h)
-file(GLOB OSAL_HEADERS soem_rsl/osal/osal.h soem_rsl/osal/${OS}/*.h)
-file(GLOB OSHW_HEADERS soem_rsl/oshw/${OS}/*.h)
+file(GLOB soem_rsl_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/soem_rsl/*.c)
+file(GLOB OSAL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/osal/${OS}/*.c)
+file(GLOB OSHW_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/oshw/${OS}/*.c)
 
-message(${OSAL_HEADERS})
+file(GLOB soem_rsl_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/soem_rsl/*.h)
+file(GLOB OSAL_HEADERS 
+     ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/osal/osal.h 
+     ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/osal/${OS}/*.h)
+file(GLOB OSHW_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/oshw/${OS}/*.h)
+
+message("OSAL headers: ${OSAL_HEADERS}")
 
 add_library(soem_rsl STATIC
   ${soem_rsl_SOURCES}
@@ -80,37 +76,45 @@ target_link_libraries(soem_rsl ${OS_LIBS})
 set_target_properties (soem_rsl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(soem_rsl PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/soem_rsl/soem_rsl>
-  $<INSTALL_INTERFACE:include/soem_rsl/soem_rsl>)
-
-target_include_directories(soem_rsl PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/soem_rsl/osal>
-  $<INSTALL_INTERFACE:include/soem_rsl/soem_rsl>)
-
-target_include_directories(soem_rsl PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/soem_rsl/osal/${OS}>
-  $<INSTALL_INTERFACE:include/soem_rsl/soem_rsl>)
-
-target_include_directories(soem_rsl
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/soem_rsl/oshw/${OS}>
-  $<INSTALL_INTERFACE:include/soem_rsl/soem_rsl>)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl>
+  $<INSTALL_INTERFACE:include>)
 
 message("LIB_DIR: ${soem_rsl_LIB_INSTALL_DIR}")
 
-install(TARGETS soem_rsl EXPORT soem_rslConfig DESTINATION ${soem_rsl_LIB_INSTALL_DIR})
-
-install(EXPORT soem_rslConfig DESTINATION share/soem_rsl/cmake)
-
-install(FILES
-  ${soem_rsl_HEADERS}
-  ${OSAL_HEADERS}
-  ${OSHW_HEADERS}
-  DESTINATION ${soem_rsl_INCLUDE_INSTALL_DIR}
+install(TARGETS soem_rsl
+  EXPORT soem_rslConfig
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include/soem_rsl
 )
 
-install(FILES
-  ./soem_rsl/soem_rsl/ethercattype.h
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+# Install headers maintaining directory structure
+# Install headers
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/soem_rsl/
+  DESTINATION include/soem_rsl/soem_rsl
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/osal/
+  DESTINATION include/soem_rsl/osal
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/osal/${OS}/
+  DESTINATION include/soem_rsl/osal/${OS}
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/soem_rsl/oshw/${OS}/
+  DESTINATION include/soem_rsl/oshw/${OS}
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(EXPORT soem_rslConfig
+  NAMESPACE soem_rsl::
+  DESTINATION share/soem_rsl/cmake
 )
 
 #message(${CMAKE_INSTALL_PREFIX})
@@ -118,8 +122,16 @@ install(FILES
  #                 COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/include/soem_rsl/ethercattype.h ${CMAKE_INSTALL_PREFIX}/include/ethercattype.h
  #                 VERBATIM)
 
-if(BUILD_TESTS) 
-  add_subdirectory(soem_rsl/test/linux/slaveinfo)
-  add_subdirectory(soem_rsl/test/linux/eepromtool)
-  add_subdirectory(soem_rsl/test/linux/simple_test)
+if(BUILD_TESTS)
+  if(BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+    if(UNIX AND NOT APPLE)
+      add_subdirectory(soem_rsl/test/linux/slaveinfo)
+      add_subdirectory(soem_rsl/test/linux/eepromtool)
+      add_subdirectory(soem_rsl/test/linux/simple_test)
+    endif()
+  endif()
 endif()
+
+ament_export_include_directories(include)
+ament_package()

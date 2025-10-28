@@ -40,9 +40,9 @@
 #include <wvLib.h>
 #include <sysLib.h>
 
-#include "oshw.h"
-#include "osal.h"
-#include "nicdrv.h"
+#include "soem_rsl/oshw/linux/oshw.h"
+#include "soem_rsl/osal/osal.h"
+#include "soem_rsl/oshw/linux/nicdrv.h"
 
 #define NIC_DEBUG                /* Print debugging info? */
 

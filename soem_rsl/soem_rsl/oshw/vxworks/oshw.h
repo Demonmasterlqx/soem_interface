@@ -11,9 +11,9 @@
 #ifndef _oshw_
 #define _oshw_
 
-#include "ethercattype.h"
-#include "nicdrv.h"
-#include "ethercatmain.h"
+#include "soem_rsl/soem_rsl/ethercattype.h"
+#include "soem_rsl/oshw/linux/nicdrv.h"
+#include "soem_rsl/soem_rsl/ethercatmain.h"
 
 uint16 oshw_htons(uint16 hostshort);
 uint16 oshw_ntohs(uint16 networkshort);

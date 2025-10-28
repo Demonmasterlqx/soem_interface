@@ -3,7 +3,7 @@
  * LICENSE file in the project root for full license information
  */
 
-#include <osal.h>
+#include "soem_rsl/osal/osal.h"
 #include <kern.h>
 #include <time.h>
 #include <sys/time.h>

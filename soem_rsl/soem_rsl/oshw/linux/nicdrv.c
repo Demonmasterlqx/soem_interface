@@ -44,8 +44,8 @@
 #include <netpacket/packet.h>
 #include <pthread.h>
 
-#include "oshw.h"
-#include "osal.h"
+#include "soem_rsl/oshw/linux/oshw.h"
+#include "soem_rsl/osal/osal.h"
 
 /** Redundancy modes */
 enum

@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <osal.h>
+#include "soem_rsl/osal/osal.h"
 #include <vxWorks.h>
 #include <taskLib.h>
 

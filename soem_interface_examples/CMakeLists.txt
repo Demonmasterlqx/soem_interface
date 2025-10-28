@@ -18,70 +18,63 @@
 # You should have received a copy of the GNU General Public License
 # along with the soem_interface_rsl.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.8)
 project(soem_interface_examples)
 
-add_definitions(-std=c++14 -Wall -Werror)
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-Wall -Werror)
 add_definitions(-DMELO_USE_COUT)
 
-set(PACKAGE_DEPENDENCIES
-  message_logger
-  soem_rsl
-  soem_interface_rsl
-)
+# Add RPATH settings
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-find_package(catkin REQUIRED
-  COMPONENTS
-    ${PACKAGE_DEPENDENCIES}
-)
-
-catkin_package(
-  INCLUDE_DIRS
-    include
-  LIBRARIES
-    ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    ${PACKAGE_DEPENDENCIES}
-)
+find_package(ament_cmake REQUIRED)
+find_package(message_logger REQUIRED)
+find_package(soem_rsl REQUIRED)
+find_package(soem_interface_rsl REQUIRED)
+find_package(candriver REQUIRED)
 
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
 )
 
 add_library(
   ${PROJECT_NAME}
   src/${PROJECT_NAME}/ExampleSlave.cpp
 )
-add_dependencies(
-  ${PROJECT_NAME}
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+target_link_libraries(${PROJECT_NAME}
+  message_logger::message_logger
+  soem_rsl::soem_rsl
+  soem_interface_rsl::soem_interface_rsl
+  candriver::candriver)
 
 add_executable(
   ${PROJECT_NAME}_1
   src/example_slave.cpp
 )
-add_dependencies(
-  ${PROJECT_NAME}_1
+target_link_libraries(${PROJECT_NAME}_1
   ${PROJECT_NAME}
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(
-  ${PROJECT_NAME}_1
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+  message_logger::message_logger
+  soem_rsl::soem_rsl
+  soem_interface_rsl::soem_interface_rsl
+  candriver::candriver)
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_1
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  EXPORT ${PROJECT_NAME}Targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
+
 install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DESTINATION include/${PROJECT_NAME}
 )
+
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(message_logger soem_rsl soem_interface_rsl candriver)
+ament_package()

@@ -14,9 +14,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "osal.h"
-#include "oshw.h"
-#include "ethercat.h"
+#include "soem_rsl/osal/osal.h"
+#include "soem_rsl/oshw/linux/oshw.h"
+#include "soem_rsl/soem_rsl/ethercat.h"
 
  /** EoE utility function to convert uint32 to eoe ip bytes.
  * @param[in] ip       = ip in uint32

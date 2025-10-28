@@ -1,2 +1,14 @@
 .ccls-cache
 compile_commands.json
+
+.vscode/
+build/
+install/
+log/
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+.idea/
+*.iml

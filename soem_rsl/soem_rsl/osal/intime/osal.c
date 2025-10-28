@@ -5,7 +5,7 @@
 
 #include <rt.h>
 #include <sys/time.h>
-#include <osal.h>
+#include "soem_rsl/osal/osal.h"
 
 static int64_t sysfrequency;
 static double qpc2usec;

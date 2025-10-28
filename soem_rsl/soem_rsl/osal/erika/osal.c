@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <osal.h>
+#include "soem_rsl/osal/osal.h"
 
 #include "ee_x86_64_tsc.h"
 

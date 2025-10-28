@@ -13,14 +13,14 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "osal.h"
-#include "oshw.h"
-#include "ethercattype.h"
-#include "ethercatbase.h"
-#include "ethercatmain.h"
-#include "ethercatcoe.h"
-#include "ethercatsoe.h"
-#include "ethercatconfig.h"
+#include "soem_rsl/osal/osal.h"
+#include "soem_rsl/oshw/linux/oshw.h"
+#include "soem_rsl/soem_rsl/ethercattype.h"
+#include "soem_rsl/soem_rsl/ethercatbase.h"
+#include "soem_rsl/soem_rsl/ethercatmain.h"
+#include "soem_rsl/soem_rsl/ethercatcoe.h"
+#include "soem_rsl/soem_rsl/ethercatsoe.h"
+#include "soem_rsl/soem_rsl/ethercatconfig.h"
 
 
 typedef struct

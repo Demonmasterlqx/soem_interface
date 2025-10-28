@@ -25,21 +25,41 @@
 #include <soem_interface_rsl/EthercatBusBase.hpp>
 #include <soem_interface_rsl/EthercatSlaveBase.hpp>
 
+#include "candriver/candriver.hpp"
+
 #define RX_PDO_ID 0x6000
 #define TX_PDO_ID 0x7000
 
 namespace soem_interface_examples {
 
-struct TxPdo {
-  uint8_t state = 0;
-  float data1 = 0.0;
-  float data2 = 0.0;
-} __attribute__((packed));
+struct can_frame_struct
+{
+    uint8_t can_channel;  // CAN通道号
+    uint32_t std_id : 11; // 标准帧ID
+    uint16_t dlc : 4;     // 数据长度
+    uint8_t data[8];      // 数据
+}__attribute__((packed));
+
+struct ecat2can_tx_rx_message{
+  uint8_t command;     // 命令字
+  uint8_t frame_count; // 有效数据帧数
+  uint8_t reserved[3];
+  can_frame_struct can_frames[17];
+}  __attribute__((packed));
+
+enum class Ecat2Can_Command : uint8_t {
+    LOOP_TEST = 0x00, // 回环模式，即接收到的消息原封不动发回去
+    WORK_MODE = 0x01, // 工作模式，即正常转运can消息
+    HW_RESET = 0x02,  // 模块硬件重启复位
+    ONLY_FDB = 0x03,  // 只发送从站收到的can反馈，不发送主站消息
+};
 
 struct RxPdo {
   float command1 = 0.0;
   float command2 = 0.0;
 } __attribute__((packed));
+
+using CanDriver=RM_communication::CanDriver;
 
 class ExampleSlave : public soem_interface_rsl::EthercatSlaveBase {
  public:
@@ -58,8 +78,11 @@ class ExampleSlave : public soem_interface_rsl::EthercatSlaveBase {
  private:
   const std::string name_;
   PdoInfo pdoInfo_;
-  TxPdo reading_;
-  RxPdo command_;
+  ecat2can_tx_rx_message reading_;
+  ecat2can_tx_rx_message command_;
+
+  std::vector<std::shared_ptr<CanDriver>> can_drivers_;
+  const std::string CAN_INTERFACE_PREFIX = "can";
 };
 
 }  // namespace soem_interface_examples

@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "oshw.h"
+#include "soem_rsl/oshw/linux/oshw.h"
 
 /**
  * Host to Network byte order (i.e. to big endian).

@@ -4,7 +4,7 @@
  */
 
 #include <winsock2.h>
-#include <osal.h>
+#include "soem_rsl/osal/osal.h"
 #include "osal_win32.h"
 
 static int64_t sysfrequency;

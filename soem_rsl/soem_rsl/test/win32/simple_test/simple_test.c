@@ -13,8 +13,8 @@
 #include <string.h>
 //#include <Mmsystem.h>
 
-#include "osal.h"
-#include "ethercat.h"
+#include "soem_rsl/osal/osal.h"
+#include "soem_rsl/soem_rsl/ethercat.h"
 
 #define EC_TIMEOUTMON 500
 

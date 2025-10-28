@@ -8,9 +8,9 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "oshw.h"
+#include "soem_rsl/oshw/linux/oshw.h"
 #include "intel_i210.h"
-#include "ethercat.h"
+#include "soem_rsl/soem_rsl/ethercat.h"
 
 #if !defined(__gnu_linux__)
 #include <machine/endian.h>

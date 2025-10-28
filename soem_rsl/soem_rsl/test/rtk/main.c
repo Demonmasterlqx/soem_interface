@@ -8,9 +8,9 @@
  */
 
 #include <kern.h>
-#include "ethercat.h"
+#include "soem_rsl/soem_rsl/ethercat.h"
 #include "string.h"
-#include <oshw.h>
+#include "soem_rsl/oshw/linux/oshw.h"
 #include <config.h>
 
 #include <defBF537.h>

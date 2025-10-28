@@ -15,7 +15,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "ethercat.h"
+#include "soem_rsl/soem_rsl/ethercat.h"
 
 char IOmap[4096];
 ec_ODlistt ODlist;

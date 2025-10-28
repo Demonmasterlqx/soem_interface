@@ -16,7 +16,7 @@ extern "C"
 {
 #endif
 
-#include <ethercattype.h> 
+#include "soem_rsl/soem_rsl/ethercattype.h" 
 
 /** DNS length according to ETG 1000.6 */
 #define EOE_DNS_NAME_LENGTH  32

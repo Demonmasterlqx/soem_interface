@@ -11,9 +11,9 @@
 #ifndef _oshw_
 #define _oshw_
 
-#include "ethercattype.h"
-#include "ethercatmain.h"
-#include "nicdrv.h"
+#include "soem_rsl/soem_rsl/ethercattype.h"
+#include "soem_rsl/soem_rsl/ethercatmain.h"
+#include "soem_rsl/oshw/linux/nicdrv.h"
 
 #ifdef __cplusplus
 extern "C" {

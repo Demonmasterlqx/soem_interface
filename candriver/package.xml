@@ -1,0 +1,19 @@
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>candriver</name>
+  <version>0.1.0</version>
+  <description>CAN driver package for EtherCAT-CAN bridge</description>
+  
+  <maintainer email="your-email@example.com">Your Name</maintainer>
+  <license>GPLv3</license>
+  
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <depend>message_logger</depend>
+  <depend>soem_rsl</depend>
+  <depend>soem_interface_rsl</depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

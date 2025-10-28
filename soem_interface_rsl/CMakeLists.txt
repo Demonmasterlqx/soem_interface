@@ -21,34 +21,20 @@
 cmake_minimum_required(VERSION 3.15)
 project(soem_interface_rsl)
 
-add_definitions(-std=c++17 -Wall -Werror)
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-Wall -Werror)
 add_definitions(-DMELO_USE_COUT)
 
+# Add RPATH settings
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-
-set(PACKAGE_DEPENDENCIES
-  message_logger
-  soem_rsl
-)
-
-find_package(catkin REQUIRED
-  COMPONENTS
-    ${PACKAGE_DEPENDENCIES}
-)
-
-catkin_package(
-  INCLUDE_DIRS
-    include
-  LIBRARIES
-    ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    ${PACKAGE_DEPENDENCIES}
-)
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
+find_package(ament_cmake REQUIRED)
+find_package(message_logger REQUIRED)
+find_package(soem_rsl REQUIRED)
 
 #this has to be a shared lib because we have to avoid symbol clashes with other (older) versions of SOEM which might exists in the workspace.
 # e.g. ros-noetic-soem package (used by BOTA, ANYbotics.)
@@ -61,31 +47,33 @@ add_library(
   src/${PROJECT_NAME}/EthercatBusBase.cpp
 )
 
-add_dependencies(
-  ${PROJECT_NAME}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-# https://stackoverflow.com/questions/2222162/how-to-apply-fvisibility-option-to-symbols-in-static-libraries
-# special link option.
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--exclude-libs,ALL")
 target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--exclude-libs,ALL")
 
-target_link_libraries(
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
+
+target_link_libraries(${PROJECT_NAME}
+  message_logger::message_logger
+  soem_rsl::soem_rsl)
 
 #hide all symboles except the explicitly marked ones.
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 set_target_properties(${PROJECT_NAME} PROPERTIES C_VISIBILITY_PRESET hidden)
 
 install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  EXPORT ${PROJECT_NAME}Targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
+
 install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DESTINATION include/${PROJECT_NAME}
 )
+
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(message_logger soem_rsl)
+ament_package()

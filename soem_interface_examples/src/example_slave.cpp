@@ -22,14 +22,17 @@
 
 #include <soem_interface_examples/ExampleSlave.hpp>
 #include <soem_interface_rsl/EthercatBusBase.hpp>
+#include <soem_rsl/soem_rsl/ethercattype.h>
+
+#include <thread>
 
 // This shows a minimal example on how to use the soem_interface_rsl library.
 // Keep in mind that this is non-working example code, with only minimal error handling
 
 int main(int argc, char** argv) {
-  const std::string busName = "eth1";
+  const std::string busName = "enp2s0";
   const std::string slaveName = "ExampleSlave";
-  const uint32_t slaveAddress = 0;
+  const uint32_t slaveAddress = 1;  // First slave has address 1
 
   std::unique_ptr<soem_interface_rsl::EthercatBusBase> bus = std::make_unique<soem_interface_rsl::EthercatBusBase>(busName);
 
@@ -37,7 +40,7 @@ int main(int argc, char** argv) {
       std::make_shared<soem_interface_examples::ExampleSlave>(slaveName, bus.get(), slaveAddress);
 
   bus->addSlave(slave);
-  bus->startup();
+  bus->startup(true);  // Enable size check
   bus->setState(EC_STATE_OPERATIONAL);
 
   if (!bus->waitForState(EC_STATE_OPERATIONAL, slaveAddress)) {
@@ -47,7 +50,16 @@ int main(int argc, char** argv) {
 
   while (true) {
     bus->updateRead();
+
+    
+
     bus->updateWrite();
+    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+    if(!bus->busIsOk()){
+      bus->shutdown();
+      bus->startup(true);
+      bus->setState(EC_STATE_OPERATIONAL);
+    }
   }
 
   bus->shutdown();

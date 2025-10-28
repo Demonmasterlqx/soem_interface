@@ -39,9 +39,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "oshw.h"
-#include "osal.h"
-#include "nicdrv.h"
+#include "soem_rsl/oshw/linux/oshw.h"
+#include "soem_rsl/osal/osal.h"
+#include "soem_rsl/oshw/linux/nicdrv.h"
 #include "ee.h"
 #include "intel_i210.h"
 #include "ee_x86_64_tsc.h"

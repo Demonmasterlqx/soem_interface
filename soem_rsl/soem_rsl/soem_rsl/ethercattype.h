@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-#include "osal.h"
+#include "soem_rsl/osal/osal.h"
 
 /** define EC_VER1 if version 1 default context and functions are needed
  * define EC_VER2 if application uses only ecx_ functions and own context */
