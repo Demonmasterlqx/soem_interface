@@ -37,6 +37,8 @@ find_package(message_logger REQUIRED)
 find_package(soem_rsl REQUIRED)
 find_package(soem_interface_rsl REQUIRED)
 find_package(candriver REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(rclcpp REQUIRED)
 
 include_directories(
   include
@@ -62,6 +64,10 @@ target_link_libraries(${PROJECT_NAME}_1
   soem_rsl::soem_rsl
   soem_interface_rsl::soem_interface_rsl
   candriver::candriver)
+
+ament_target_dependencies(${PROJECT_NAME}
+  realtime_tools
+  rclcpp)
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_1
   EXPORT ${PROJECT_NAME}Targets

@@ -29,10 +29,14 @@
 // This shows a minimal example on how to use the soem_interface_rsl library.
 // Keep in mind that this is non-working example code, with only minimal error handling
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
+
+  rclcpp::init(argc, argv);
+
   const std::string busName = "enp2s0";
   const std::string slaveName = "ExampleSlave";
-  const uint32_t slaveAddress = 1;  // First slave has address 1
+  const uint32_t slaveAddress = 1; // First slave has address 1
 
   std::unique_ptr<soem_interface_rsl::EthercatBusBase> bus = std::make_unique<soem_interface_rsl::EthercatBusBase>(busName);
 
@@ -40,26 +44,30 @@ int main(int argc, char** argv) {
       std::make_shared<soem_interface_examples::ExampleSlave>(slaveName, bus.get(), slaveAddress);
 
   bus->addSlave(slave);
-  bus->startup(true);  // Enable size check
+  bus->startup(true); // Enable size check
   bus->setState(EC_STATE_OPERATIONAL);
 
-  if (!bus->waitForState(EC_STATE_OPERATIONAL, slaveAddress)) {
+  if (!bus->waitForState(EC_STATE_OPERATIONAL, slaveAddress))
+  {
     // Something is wrong
     return 1;
   }
 
-  while (true) {
-    bus->updateRead();
-
-    
-
-    bus->updateWrite();
-    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
-    if(!bus->busIsOk()){
+  while (true)
+  {
+    if (!bus->busIsAvailable() || !bus->busIsOk())
+    {
       bus->shutdown();
-      bus->startup(true);
+      if (!bus->startup(true))
+      {
+        MELO_ERROR_STREAM("Failed to restart EtherCAT bus. Retrying in 1 second...");
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        continue;
+      }
       bus->setState(EC_STATE_OPERATIONAL);
     }
+    bus->updateRead();
+    bus->updateWrite();
   }
 
   bus->shutdown();
