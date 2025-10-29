@@ -1,0 +1,15 @@
+[Unit]
+Description=Virtual CAN Interface Manager Service (Shell Script)
+After=network.target multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/vcan_manager.sh
+Restart=on-failure
+RestartSec=1s                   # Wait 5 seconds before restarting
+StandardOutput=syslog           # Redirect stdout to syslog
+StandardError=syslog            # Redirect stderr to syslog
+SyslogIdentifier=vcan_manager_shell
+
+[Install]
+WantedBy=multi-user.target
