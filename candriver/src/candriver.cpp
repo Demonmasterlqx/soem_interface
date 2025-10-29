@@ -143,6 +143,8 @@ bool CanDriver::sendMessage(const can_frame& frame) {
 }
 
 bool CanDriver::receiveMessage(can_frame& frame) {
+    // 测试延迟
+    // auto begin = std::chrono::high_resolution_clock::now();
     if (!isCanOk()) {
         std::cerr << "Error: CAN socket is not open or interface is down. Cannot receive message." << std::endl;
         return false;
@@ -151,21 +153,36 @@ bool CanDriver::receiveMessage(can_frame& frame) {
     // 在读取的时候设置为不阻塞
     setBlockingMode(false);
 
-    int nbytes = read(socket_fd, &frame, sizeof(frame));
-    if (nbytes == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return false; // 表示当前没有接收到消息
-        } else {
-            std::cerr << "Error: Could not read CAN message due to an unrecoverable error. " << strerror(errno) << std::endl;
+    can_frame latest_frame={0};
+    can_frame temp_frame={0};
+    bool found_frame = false;
+    int nbytes = 0;
+    while((nbytes = read(socket_fd, &temp_frame, sizeof(temp_frame))) > 0){
+        if(nbytes != sizeof(temp_frame)){
+            std::cerr << "Error: Partial CAN message read. Read " << nbytes << " of " << sizeof(temp_frame) << " bytes." << std::endl;
             setCanState(false);
             return false;
         }
-    } else if (nbytes != sizeof(frame)) {
-        std::cerr << "Error: Partial CAN message read. Read " << nbytes << " of " << sizeof(frame) << " bytes." << std::endl;
+        latest_frame = temp_frame;
+        found_frame = true;
+    }
+
+    // 检查退出条件
+    if (nbytes < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        std::cerr << "Error: Could not read CAN message due to an unrecoverable error. " << strerror(errno) << std::endl;
         setCanState(false);
         return false;
     }
+
+    if(found_frame){
+        frame = latest_frame;
+    } else {
+        return false; // 表示当前没有接收到消息
+    }
+
     setCanState(true);
+    // auto end =  std::chrono::high_resolution_clock::now();
+    // std::cout<< "CAN receive latency: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << " us" << std::endl;
     return true;
 }
 
@@ -224,6 +241,58 @@ bool CanDriver::setBlockingMode(bool blocking) {
         return false;
     }
 
+    return true;
+}
+
+bool CanDriver::receiveAllUniqueMessages(std::vector<can_frame>& frames) {
+    if (!isCanOk()) {
+        std::cerr << "Error: CAN socket is not open or interface is down. Cannot receive messages." << std::endl;
+        return false;
+    }
+
+    // 在读取的时候设置为不阻塞
+    setBlockingMode(false);
+
+    std::vector<can_frame> unique_frames;
+    can_frame temp_frame={0};
+    bool found_frame = false;
+    int nbytes = 0;
+    while((nbytes = read(socket_fd, &temp_frame, sizeof(temp_frame))) > 0){
+        if(nbytes != sizeof(temp_frame)){
+            std::cerr << "Error: Partial CAN message read. Read " << nbytes << " of " << sizeof(temp_frame) << " bytes." << std::endl;
+            setCanState(false);
+            return false;
+        }
+        // 检查是否唯一
+        bool is_unique = true;
+        for(const auto& frame : unique_frames){
+            if(frame.can_id == temp_frame.can_id &&
+               frame.can_dlc == temp_frame.can_dlc &&
+               std::memcmp(frame.data, temp_frame.data, 8) == 0){
+                is_unique = false;
+                break;
+            }
+        }
+        if(is_unique){
+            unique_frames.push_back(temp_frame);
+        }
+        found_frame = true;
+    }
+
+    // 检查退出条件
+    if (nbytes < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        std::cerr << "Error: Could not read CAN message due to an unrecoverable error. " << strerror(errno) << std::endl;
+        setCanState(false);
+        return false;
+    }
+
+    if(found_frame){
+        frames = unique_frames;
+    } else {
+        return false; // 表示当前没有接收到消息
+    }
+
+    setCanState(true);
     return true;
 }
 

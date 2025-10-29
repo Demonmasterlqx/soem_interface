@@ -26,13 +26,40 @@
 
 #include <thread>
 
+#include <sched.h>
+#include <iostream>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+
 // This shows a minimal example on how to use the soem_interface_rsl library.
 // Keep in mind that this is non-working example code, with only minimal error handling
 
+std::atomic<bool> run_loop{true};
+
+void signalHandler(int signum)
+{
+    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    run_loop.store(false);
+}
+
 int main(int argc, char **argv)
 {
+  // 设置线程优先级
+  pid_t pid = getpid(); // 获取当前进程 PID，也可以指定其他 PID
+  struct sched_param param;
+  param.sched_priority = 90; // 设置实时优先级为 50
+
+  if (sched_setscheduler(pid, SCHED_FIFO, &param) == -1) {
+    MELO_ERROR_STREAM("Failed to set real-time scheduler: " << strerror(errno));
+    MELO_ERROR_STREAM("Need root privileges for real-time scheduling.");
+  }
+
+  signal(SIGINT, signalHandler);
 
   rclcpp::init(argc, argv);
+
+
 
   const std::string busName = "enp2s0";
   const std::string slaveName = "ExampleSlave";
@@ -53,21 +80,35 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  while (true)
+  rclcpp::Rate rate(1000.0);
+
+  while (run_loop.load())
   {
+
+
     if (!bus->busIsAvailable() || !bus->busIsOk())
     {
-      bus->shutdown();
-      if (!bus->startup(true))
-      {
-        MELO_ERROR_STREAM("Failed to restart EtherCAT bus. Retrying in 1 second...");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        continue;
-      }
-      bus->setState(EC_STATE_OPERATIONAL);
+      MELO_ERROR_STREAM("Bus error detected, stopping main loop.");
+      break;
     }
+
+    auto start_time = std::chrono::high_resolution_clock::now();
     bus->updateRead();
+    auto update_time = std::chrono::high_resolution_clock::now();
     bus->updateWrite();
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+
+    // Compute and print durations
+    auto read_duration = std::chrono::duration_cast<std::chrono::microseconds>(update_time - start_time).count();
+    auto write_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - update_time).count();
+    // MELO_INFO_STREAM("Read duration: " << read_duration << " us, Write duration: " << write_duration << " us");
+    if (!rate.sleep()) {
+      rate.reset();
+      MELO_WARN_STREAM("Loop overrun!");
+      MELO_INFO_STREAM("Read duration: " << read_duration << " us, Write duration: " << write_duration << " us");
+    }
+    // std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
 
   bus->shutdown();

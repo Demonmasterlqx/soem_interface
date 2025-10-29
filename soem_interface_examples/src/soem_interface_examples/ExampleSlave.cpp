@@ -40,10 +40,10 @@ namespace soem_interface_examples
     {
 
         // 初始化4个can口
-        can_drivers_.resize(4, nullptr);
-        for (int i = 0; i < 4; ++i)
+        can_drivers_.resize(CAN_CHANNEL_NUM, nullptr);
+        for (int i = 0; i < CAN_CHANNEL_NUM; ++i)
         {
-            can_drivers_[i] = std::make_shared<CanManager>(CAN_INTERFACE_PREFIX + std::to_string(i));
+            can_drivers_[i] = std::make_shared<CanDriver>(CAN_INTERFACE_PREFIX + std::to_string(i));
         }
 
         // Do nothing else
@@ -52,51 +52,77 @@ namespace soem_interface_examples
 
     void ExampleSlave::updateRead()
     {
+        // auto total_start = std::chrono::high_resolution_clock::now();
         bus_->readTxPdo(address_, reading_);
-        MELO_INFO_STREAM("Received frame count: " << static_cast<int>(reading_.frame_count));
+
+        // auto read_start = std::chrono::high_resolution_clock::now();
+
+        // MELO_DEBUG_STREAM("Received frame count: " << static_cast<int>(reading_.frame_count));
         for (int i = 0; i < reading_.frame_count; ++i)
         {
             const can_frame_struct &frame = reading_.can_frames[i];
-            MELO_INFO_STREAM("CAN Channel: " << static_cast<int>(frame.can_channel)
-                                             << ", Std ID: " << frame.std_id
-                                             << ", DLC: " << static_cast<int>(frame.dlc)
-                                             << ", Data: ");
-            for (int j = 0; j < frame.dlc; ++j)
-            {
-                MELO_INFO_STREAM(std::hex << static_cast<int>(frame.data[j]) << " ");
-            }
-            MELO_INFO_STREAM(std::dec);
+            // MELO_INFO_STREAM("CAN Channel: " << static_cast<int>(frame.can_channel)
+            //                                  << ", Std ID: " << frame.std_id
+            //                                  << ", DLC: " << static_cast<int>(frame.dlc)
+            //                                  << ", Data: ");
+            // for (int j = 0; j < frame.dlc; ++j)
+            // {
+            //     MELO_INFO_STREAM(std::hex << static_cast<int>(frame.data[j]) << " ");
+            // }
+            // MELO_INFO_STREAM(std::dec);
 
             // 发送到对应的can口
+
+            // auto begin = std::chrono::high_resolution_clock::now();
+
             int channel = frame.can_channel;
-            if (channel >= 0 && channel < static_cast<int>(can_drivers_.size()))
+            if (channel >= 0 && channel < CAN_CHANNEL_NUM)
             {
                 can_frame canFrame;
                 canFrame.can_id = frame.std_id;
                 canFrame.can_dlc = frame.dlc;
                 std::copy(std::begin(frame.data), std::begin(frame.data) + frame.dlc, std::begin(canFrame.data));
-                can_drivers_[channel]->writeCanFrame(canFrame);
+                if(!can_drivers_[channel]->sendMessage(canFrame)){
+                    MELO_ERROR_STREAM("Failed to send CAN message on channel " << channel);
+                    can_drivers_[channel]->reopenCanSocket();
+                }
             }
             else
             {
                 MELO_ERROR_STREAM("Invalid CAN channel: " << channel);
             }
-            std::this_thread::sleep_for(std::chrono::nanoseconds(50)); // 避免发送过快
+
+            // auto end = std::chrono::high_resolution_clock::now();
+            // auto diff = end - begin;
+            // MELO_INFO_STREAM("Processing time for CAN frame: " << (diff).count()/1000.0 << " us");
         }
+        // auto total_end = std::chrono::high_resolution_clock::now();
+        // auto total_diff = total_end - total_start;
+        // auto read_diff = read_start - total_start;
+        // MELO_INFO_STREAM("Time taken to read PDO: " << (read_diff).count()/1000.0 << " us");
+        // MELO_INFO_STREAM("Total processing time for all CAN frames: " << (total_diff).count()/1000.0 << " us");
     }
 
     void ExampleSlave::updateWrite()
     {
+        // auto start_time = std::chrono::high_resolution_clock::now();
         bus_->writeRxPdo(address_, command_);
         command_.command = static_cast<uint8_t>(Ecat2Can_Command::WORK_MODE);
         // 接受各个can口的消息
         command_.frame_count = 0;
-        for (size_t channel = 0; channel < can_drivers_.size(); ++channel)
+        for (int channel = 0; channel < CAN_CHANNEL_NUM; ++channel)
         {
             std::vector<can_frame> frames;
-            can_drivers_[channel]->getCanFrame(frames);
-            for (const auto &frame : frames)
-            {
+            if(!can_drivers_[channel]->receiveAllUniqueMessages(frames)){
+                // 处理错误
+                if(can_drivers_[channel]->isCanOk() == false){
+                    MELO_ERROR_STREAM("CAN bus error on channel " << channel);
+                    can_drivers_[channel]->reopenCanSocket();
+                }
+                continue;
+            }
+
+            for(const auto& frame : frames){
                 if (command_.frame_count < MAXCANRXTXMSGSIZE)
                 {
                     can_frame_struct &pdo_frame = command_.can_frames[command_.frame_count];
@@ -112,162 +138,17 @@ namespace soem_interface_examples
                     break;
                 }
             }
+
         }
-        MELO_INFO_STREAM("Sending frame count: " << static_cast<int>(command_.frame_count));
+        // auto end_time = std::chrono::high_resolution_clock::now();
+        // auto diff = end_time - start_time;
+        // MELO_INFO_STREAM("Time taken to write PDO: " << (diff).count()/1000.0 << " us");
+        // MELO_INFO_STREAM("Sending frame count: " << static_cast<int>(command_.frame_count));
     }
 
     void ExampleSlave::shutdown()
     {
         // Do nothing
-    }
-
-    CanManager::CanManager(const std::string &interface_name)
-    {
-        can_driver_ = std::make_shared<CanDriver>(interface_name);
-        read_can_thread_ = std::make_shared<std::thread>(&CanManager::readCanLoop, this);
-    }
-
-    void CanManager::writeCanFrame(const can_frame &frame)
-    {
-        std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> buffer = getInputCanFrameBuffer(frame.can_id);
-        CanFrameWrapper wrapper;
-        wrapper.frame = frame;
-        wrapper.is_new = true;
-        std::cout << 2 << std::endl;
-        buffer->writeFromNonRT(wrapper);
-    }
-
-    void CanManager::getCanFrame(std::vector<can_frame> &frames)
-    {
-        frames.clear();
-        std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> buffers = getAllOutputCanFrameBuffers();
-        for (auto &buffer : buffers)
-        {
-            CanFrameWrapper wrapper = *buffer->readFromRT();
-            if (wrapper.is_new)
-            {
-                frames.push_back(wrapper.frame);
-                wrapper.is_new = false;
-                buffer->writeFromNonRT(wrapper);
-            }
-        }
-    }
-
-    std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> CanManager::getInputCanFrameBuffer(int id)
-    {
-        std::lock_guard<std::mutex> lock(input_can_frame_buffers_mutex_);
-        if (input_can_frame_buffers_.find(id) == input_can_frame_buffers_.end())
-        {
-            input_can_frame_buffers_[id] = std::make_shared<realtime_tools::RealtimeBuffer<CanFrameWrapper>>();
-            input_can_frame_buffers_[id]->initRT(
-                CanFrameWrapper{0});
-        }
-        return input_can_frame_buffers_[id];
-    }
-
-    std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> CanManager::getOutputCanFrameBuffer(int id)
-    {
-        std::lock_guard<std::mutex> lock(output_can_frame_buffers_mutex_);
-        if (output_can_frame_buffers_.find(id) == output_can_frame_buffers_.end())
-        {
-            output_can_frame_buffers_[id] = std::make_shared<realtime_tools::RealtimeBuffer<CanFrameWrapper>>();
-            output_can_frame_buffers_[id]->initRT(
-                CanFrameWrapper{0});
-        }
-        return output_can_frame_buffers_[id];
-    }
-
-    std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> CanManager::getAllOutputCanFrameBuffers()
-    {
-        std::lock_guard<std::mutex> lock(output_can_frame_buffers_mutex_);
-        std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> buffers;
-        for (auto &pair : output_can_frame_buffers_)
-        {
-            buffers.push_back(pair.second);
-        }
-        return buffers;
-    }
-
-    std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> CanManager::getAllInputCanFrameBuffers()
-    {
-        std::lock_guard<std::mutex> lock(input_can_frame_buffers_mutex_);
-        std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> buffers;
-        for (auto &pair : input_can_frame_buffers_)
-        {
-            buffers.push_back(pair.second);
-        }
-        return buffers;
-    }
-
-    int CanManager::getInputCanFrameBufferSize()
-    {
-        std::lock_guard<std::mutex> lock(input_can_frame_buffers_mutex_);
-        return static_cast<int>(input_can_frame_buffers_.size());
-    }
-
-    int CanManager::getOutputCanFrameBufferSize()
-    {
-        std::lock_guard<std::mutex> lock(output_can_frame_buffers_mutex_);
-        return static_cast<int>(output_can_frame_buffers_.size());
-    }
-
-    CanManager::~CanManager()
-    {
-        stop_read_thread_.store(true);
-        if (read_can_thread_ && read_can_thread_->joinable())
-        {
-            read_can_thread_->join();
-        }
-    }
-
-    void CanManager::readCanLoop()
-    {
-        rclcpp::Rate rate(1000);
-        std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> input_buffers;
-        while (stop_read_thread_.load() == false)
-        {
-            can_frame frame;
-
-            if (can_driver_->isCanOk() == false)
-            {
-                MELO_ERROR_STREAM("CAN interface error, trying to reopen...");
-                can_driver_->reopenCanSocket();
-                continue;
-            }
-
-            if (can_driver_->receiveMessage(frame))
-            {
-                std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> buffer = getOutputCanFrameBuffer(frame.can_id);
-                CanFrameWrapper wrapper;
-                wrapper.frame = frame;
-                wrapper.is_new = true;
-                buffer->writeFromNonRT(wrapper);
-            }
-
-            if (static_cast<int>(input_buffers.size()) != getInputCanFrameBufferSize())
-            {
-                input_buffers = getAllInputCanFrameBuffers();
-            }
-
-            for (auto &buffer : input_buffers)
-            {
-                CanFrameWrapper wrapper = *buffer->readFromRT();
-                if (wrapper.is_new)
-                {
-                    std::cout << 1 << std::endl;
-                    if (!can_driver_->sendMessage(wrapper.frame))
-                    {
-                        MELO_ERROR_STREAM("Failed to send CAN message on channel " << wrapper.frame.can_id);
-                        can_driver_->reopenCanSocket();
-                    }
-                    wrapper.is_new = false;
-                    buffer->writeFromNonRT(wrapper);
-                }
-                std::this_thread::sleep_for(std::chrono::nanoseconds(50)); // 避免发送过快
-            }
-
-            rate.sleep();
-        }
     }
 
 } // namespace soem_interface_examples

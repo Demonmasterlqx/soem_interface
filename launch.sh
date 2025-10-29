@@ -1,0 +1,1 @@
+source /opt/ros/jazzy/setup.bash && source install/setup.bash && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/jazzy/lib && sudo -E env LD_LIBRARY_PATH=$LD_LIBRARY_PATH /home/pnx/code/soem_interface/install/soem_interface_examples/bin/soem_interface_examples_1

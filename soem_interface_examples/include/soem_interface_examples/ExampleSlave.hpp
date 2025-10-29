@@ -74,10 +74,13 @@ namespace soem_interface_examples
 
   using CanDriver = RM_communication::CanDriver;
 
-  struct CanFrameWrapper
+  struct CanFrames
   {
-    can_frame frame;
-    bool is_new = false;
+    std::vector<can_frame> frames;
+    std::chrono::high_resolution_clock::time_point timestamp;
+    CanFrames(){
+      timestamp = std::chrono::high_resolution_clock::now();
+    }
   };
 
   class ExampleSlave : public soem_interface_rsl::EthercatSlaveBase
@@ -101,62 +104,11 @@ namespace soem_interface_examples
     ecat2can_tx_rx_message reading_;
     ecat2can_tx_rx_message command_;
 
-    std::vector<std::shared_ptr<CanManager>> can_drivers_;
+    std::vector<std::shared_ptr<CanDriver>> can_drivers_;
     const std::string CAN_INTERFACE_PREFIX = "can";
     const int MAXCANRXTXMSGSIZE = 17;
-  };
 
-  class CanManager
-  {
-
-  public:
-    /**
-     * @brief Construct a new Can Manager object
-     *
-     * @param interface_name
-     */
-    CanManager(const std::string &interface_name);
-
-    ~CanManager();
-
-    /**
-     * @brief 发布一个发布任务
-     *
-     * @param frame
-     */
-    void writeCanFrame(const can_frame &frame);
-
-    /**
-     * @brief Get the Can Frame object
-     *
-     * @param frames
-     */
-    void getCanFrame(std::vector<can_frame> &frames);
-
-  private:
-    std::shared_ptr<CanDriver> can_driver_;
-
-    std::mutex input_can_frame_buffers_mutex_;
-    // 从下位机接收的can数据缓冲区
-    std::map<int, std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> input_can_frame_buffers_;
-    std::mutex output_can_frame_buffers_mutex_;
-    // 发送到下位机的can数据缓冲区
-    std::map<int, std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> output_can_frame_buffers_;
-
-    void readCanLoop();
-
-    std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> getInputCanFrameBuffer(int id);
-    std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>> getOutputCanFrameBuffer(int id);
-
-    std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> getAllOutputCanFrameBuffers();
-    std::vector<std::shared_ptr<realtime_tools::RealtimeBuffer<CanFrameWrapper>>> getAllInputCanFrameBuffers();
-
-    int getInputCanFrameBufferSize();
-
-    int getOutputCanFrameBufferSize();
-
-    std::shared_ptr<std::thread> read_can_thread_;
-    std::atomic<bool> stop_read_thread_{false};
+    const int CAN_CHANNEL_NUM = 4;
   };
 
 } // namespace soem_interface_examples

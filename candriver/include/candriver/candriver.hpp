@@ -11,6 +11,7 @@
 #include<stdlib.h>
 #include<string>
 #include<stdexcept>
+#include<vector>
 
 namespace RM_communication{
 
@@ -91,13 +92,22 @@ public:
     bool sendMessage(const can_frame& frame);
 
     /**
-     * @brief 接收CAN消息
+     * @brief 接收CAN消息读取最新的一帧
      * 
      * @param frame 要接收的CAN帧
      * @return true 成功
      * @return false 失败
      */
     bool receiveMessage(can_frame& frame);
+
+    /**
+     * @brief 接受所有不同的CAN消息，全部为最新消息
+     * 
+     * @param frames 
+     * @return true 
+     * @return false 
+     */
+    bool receiveAllUniqueMessages(std::vector<can_frame>& frames);
 
     /**
      * @brief 检查CAN状态，其只会检查到socket和网口状态,并不会检查指定can设备之后的操作
